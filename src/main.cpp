@@ -1,6 +1,7 @@
 #include "main.h"
 #include "lemlib/api.hpp"
 #include "pros/misc.h"
+#include "pros/motors.h"
 
 /**
  * A callback function for LLEMU's center button.
@@ -8,13 +9,18 @@
  * When this callback is fired, it will toggle line 2 of the LCD text between
  * "I was pressed!" and nothing.
  */
-pros::Motor left_front_motor(1, pros::E_MOTOR_GEARSET_06, false); // port 1, blue gearbox, not reversed
-pros::Motor left_back_motor(2, pros::E_MOTOR_GEARSET_18, false); // port 2, green gearbox, not reversed
-pros::Motor right_front_motor(3, pros::E_MOTOR_GEARSET_36, true); // port 3, red gearbox, reversed
-pros::Motor right_back_motor(4, pros::E_MOTOR_GEARSET_36, true); // port 4, red gearbox, reversed
+pros::Motor left_front_motor(3, pros::E_MOTOR_GEARSET_06, false); // port 1, blue gearbox, not reversed
+pros::Motor left_back_motor(4, pros::E_MOTOR_GEARSET_18, false); // port 2, green gearbox, not reversed
+pros::Motor right_front_motor(1, pros::E_MOTOR_GEARSET_36, true); // port 3, red gearbox, reversed
+pros::Motor right_back_motor(2, pros::E_MOTOR_GEARSET_36, true); // port 4, red gearbox, reversed
+
+pros::Motor intake_roller(5, pros::E_MOTOR_GEARSET_36);
+pros::Motor intake_open(6, pros::E_MOTOR_GEARSET_36);
+
 
 pros::MotorGroup left_side_motors({left_front_motor, left_back_motor});
 pros::MotorGroup right_side_motors({right_front_motor, right_back_motor});
+
 
 // drivetrain motors
 lemlib::Drivetrain_t drivetrain {
@@ -124,18 +130,36 @@ void opcontrol() {
 		                 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
 		                 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);
 
-            float yValue = master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
-            float xValue = master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
+            float xValue = master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
+            float yValue = master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
 
-            float drivetrain_left_side_speed = yValue + \
-                xValue;
-            float drivetrain_right_side_speed = yValue - \
-                xValue;
+            float drivetrain_left_side_speed = yValue + xValue;
+            float drivetrain_right_side_speed = yValue - xValue;
                 
-            left_side_motors.move_velocity(xValue);
-            right_side_motors.move_velocity(xValue);
+            left_side_motors.move_velocity(drivetrain_left_side_speed*100);
+            right_side_motors.move_velocity(drivetrain_right_side_speed*100);
 
 
-		pros::delay(20);
+
+        bool intake_roll_r1 = master.get_digital(pros::E_CONTROLLER_DIGITAL_R1);
+        bool intake_roll_r2 = master.get_digital(pros::E_CONTROLLER_DIGITAL_R2);
+        bool intake_open_a =  master.get_digital(pros::E_CONTROLLER_DIGITAL_A);
+        bool intake_open_b =  master.get_digital(pros::E_CONTROLLER_DIGITAL_A);
+
+        if (intake_roll_r1) {
+            intake_roller.move_velocity(50);
+        }
+        if (intake_roll_r2) {
+            intake_roller.brake();
+        }
+        if (intake_open_a) {
+            intake_open.move_velocity(50);
+        }
+        if (intake_roll_r2) {
+            intake_open.move_velocity(-50);
+        }
+        
+
+    		pros::delay(20);
 	}
 }
